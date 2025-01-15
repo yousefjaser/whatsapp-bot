@@ -18,10 +18,28 @@ module.exports.config = () => {
           '--no-first-run',
           '--no-zygote',
           '--single-process',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-infobars',
+          '--window-position=0,0',
+          '--ignore-certificate-errors',
+          '--ignore-certificate-errors-spki-list',
+          '--disable-extensions',
+          '--disable-default-apps',
+          '--enable-features=NetworkService',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-breakpad',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+          '--disable-ipc-flooding-protection',
+          '--disable-renderer-backgrounding',
+          '--enable-automation',
+          '--password-store=basic',
+          '--use-gl=swiftshader',
+          '--use-mock-keychain'
         ],
+        executablePath: process.env.CHROME_PATH || undefined,
         ignoreDefaultArgs: ['--disable-extensions'],
-        waitForInitialPage: true,
         timeout: 100000
       },
       qrMaxRetries: 5,
@@ -86,7 +104,6 @@ module.exports.config = () => {
     console.log("Starting client initialization...");
     client.initialize().catch(err => {
       console.error("Failed to initialize client:", err);
-      // Instead of throwing, try to recover
       setTimeout(() => {
         console.log("Attempting to reinitialize...");
         client.initialize().catch(err => {
