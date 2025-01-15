@@ -2,3 +2,10 @@
 /.wwebjs_auth
 .env
 package-lock.json
+node_modules/
+.env
+.wwebjs_auth/
+.idea/
+.vscode/
+*.log
+.DS_Store

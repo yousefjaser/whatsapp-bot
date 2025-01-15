@@ -1,24 +1,48 @@
-# whatsapp-bot-server
+# WhatsApp Bot Server
 
-## Local Server Setup
+A Node.js server for WhatsApp automation using whatsapp-web.js library.
 
-<p>Follow this instruction to setup on your local machine</p>
-<ul>
-<li>1. git clone this repository</li>
-<li>2. npm install</li>
-<li>3. "npm run devStart", to start the nodejs server </li>
-</ul>
+## Features
 
-## Production Server Setup
+- WhatsApp Web API integration
+- QR code authentication
+- Message sending functionality
+- Web interface for interaction
+- Real-time connection status
+- Swagger API documentation
 
-<p>Follow this instruction to setup on your production server</p>
-<ul>
-<li>1. git clone this repository</li>
-<li>2. npm install</li>
-<li>2. npm install pm2 -g</li>
-<li>3. "npm run start", to start the server </li>
-</ul>
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yousefjaser/whatsapp-bot-nodeServer.git
+cd whatsapp-bot-nodeServer
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the server:
+```bash
+npm start
+```
+
+## Usage
+
+1. Open `http://localhost:4000/api/v1/qr` in your browser
+2. Scan the QR code with WhatsApp on your phone
+3. Once connected, you can send messages through the web interface
 
 ## API Documentation
 
-<p>After starting the nodejs server. Navigate to "http://localhost:4000/api-docs" on your browser to see the api documentation</p>
+Access the Swagger documentation at `http://localhost:4000/api-docs`
+
+## Author
+
+- Yousef Jaser
+
+## License
+
+ISC

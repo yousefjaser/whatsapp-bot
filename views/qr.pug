@@ -2,11 +2,77 @@ doctype
 html(lang='en')
     head
         meta(charset='utf-8')
-        title
+        title WhatsApp Bot
+        style.
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                text-align: center;
+            }
+            .container {
+                margin-top: 20px;
+            }
+            .status {
+                padding: 10px;
+                margin: 10px 0;
+                border-radius: 5px;
+            }
+            .success {
+                background-color: #d4edda;
+                color: #155724;
+            }
+            .waiting {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+            form {
+                margin-top: 20px;
+                padding: 20px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                display: none;
+            }
+            input, textarea {
+                width: 100%;
+                padding: 8px;
+                margin: 5px 0;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+            button {
+                background-color: #28a745;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            button:hover {
+                background-color: #218838;
+            }
+            #qr-div {
+                margin: 20px 0;
+            }
     body
-    span(style="display:none;", id="qrcode")=qr
-    span(style="display:none;", id="clientready")=clientready
-    span(style="display:none;", id="clientauthenticated")=clientauthenticated
-    h3 Scan Qr bar-code to connect your Whatsapp, refresh and rescan if error occurs
-    div(id="qr-div")
-    script(src="/js/qr.js" type="module")
+        h2 WhatsApp Bot Connection
+        span(style="display:none;", id="qrcode")=qr
+        span(style="display:none;", id="clientready")=clientready
+        span(style="display:none;", id="clientauthenticated")=clientauthenticated
+        
+        div(class="container")
+            div(id="status-div", class="status")
+            div(id="qr-div")
+            
+            form(id="message-form")
+                h3 Send WhatsApp Message
+                div
+                    label(for="phone") Phone Number (with country code):
+                    input(type="text", id="phone", name="phone", placeholder="Example: +1234567890", required)
+                div
+                    label(for="message") Message:
+                    textarea(id="message", name="message", rows="4", placeholder="Type your message here", required)
+                button(type="submit") Send Message
+
+        script(src="/js/qr.js" type="module")
