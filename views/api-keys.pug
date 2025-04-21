@@ -1,0 +1,254 @@
+extends layout
+
+block content
+  .container-fluid
+    .row
+      .col-12
+        h1.mb-4.text-primary إدارة مفاتيح API
+        
+    .row.mb-4
+      .col-md-12
+        .card.shadow
+          .card-header.bg-primary.text-white
+            h5.mb-0 إنشاء مفتاح API جديد
+          .card-body
+            form#createApiKeyForm
+              .form-group.mb-3
+                label(for="apiKeyName") اسم المفتاح (مثل: اسم التطبيق أو الخدمة)
+                input#apiKeyName.form-control(type="text", required)
+              
+              .form-group.mb-3
+                label(for="apiKeyExpiry") تاريخ انتهاء الصلاحية (اختياري)
+                input#apiKeyExpiry.form-control(type="date")
+              
+              button.btn.btn-primary.mt-3(type="submit") إنشاء مفتاح API
+            
+            #apiKeyResult.mt-3.d-none.alert
+    
+    .row.mb-4
+      .col-md-12
+        .card.shadow
+          .card-header.bg-primary.text-white
+            h5.mb-0 مفاتيح API الحالية
+          .card-body
+            .table-responsive
+              table.table.table-hover
+                thead
+                  tr
+                    th الاسم
+                    th المفتاح
+                    th تاريخ الإنشاء
+                    th تاريخ الانتهاء
+                    th الحالة
+                    th آخر استخدام
+                    th عدد الاستخدامات
+                    th إجراءات
+                tbody#apiKeysTableBody
+                  if apiKeys && apiKeys.length > 0
+                    each key in apiKeys
+                      tr(data-key-id=key.id)
+                        td= key.name
+                        td
+                          .input-group
+                            input.form-control.api-key-value(type="text", value=key.key, readonly)
+                            button.btn.btn-outline-secondary.copy-btn(type="button", title="نسخ المفتاح")
+                              i.fas.fa-copy
+                        td= new Date(key.createdAt).toLocaleString('ar-SA')
+                        td= key.expiryDate ? new Date(key.expiryDate).toLocaleString('ar-SA') : 'غير محدد'
+                        td
+                          span.badge(class=key.isActive ? 'bg-success' : 'bg-danger')
+                            = key.isActive ? 'مفعل' : 'معطل'
+                        td= key.lastUsed ? new Date(key.lastUsed).toLocaleString('ar-SA') : 'لم يستخدم بعد'
+                        td= key.usageCount
+                        td
+                          .btn-group.btn-group-sm
+                            button.btn.btn-warning.toggle-key-btn(title=key.isActive ? 'تعطيل' : 'تفعيل')
+                              i.fas(class=key.isActive ? 'fa-pause' : 'fa-play')
+                            button.btn.btn-danger.delete-key-btn(title="حذف")
+                              i.fas.fa-trash
+                  else
+                    tr
+                      td.text-center.text-muted(colspan="8") لا توجد مفاتيح API حالياً
+
+    .row
+      .col-md-12
+        .card.shadow
+          .card-header.bg-primary.text-white
+            h5.mb-0 كيفية استخدام مفتاح API
+          .card-body
+            h5 استخدام المفتاح في طلبات API
+            hr
+            
+            h6.mt-4 1. إرسال المفتاح كرأس HTTP
+            pre.bg-light.p-3.rounded
+              code
+                | curl -X POST "https://your-domain.com/api/v2/send" \
+                | -H "x-api-key: YOUR_API_KEY" \
+                | -H "Content-Type: application/json" \
+                | -d '{"mobile": "966501234567", "message": "مرحباً من واتساب"}'
+            
+            h6.mt-4 2. إرسال المفتاح كمعلمة استعلام
+            pre.bg-light.p-3.rounded
+              code
+                | curl -X GET "https://your-domain.com/api/v2/check-number?api_key=YOUR_API_KEY&mobile=966501234567"
+            
+            h6.mt-4 مثال للتحقق من رقم هاتف
+            pre.bg-light.p-3.rounded
+              code.javascript
+                | // باستخدام JavaScript وفيتش
+                | const checkNumber = async (mobile) => {
+                |   const response = await fetch(
+                |     `https://your-domain.com/api/v2/check-number?mobile=${mobile}`, 
+                |     { 
+                |       headers: { 'x-api-key': 'YOUR_API_KEY' } 
+                |     }
+                |   );
+                |   return await response.json();
+                | };
+            
+            h6.mt-4 مثال لإرسال رسالة
+            pre.bg-light.p-3.rounded
+              code.javascript
+                | // باستخدام JavaScript وفيتش
+                | const sendMessage = async (mobile, message) => {
+                |   const response = await fetch(
+                |     'https://your-domain.com/api/v2/send', 
+                |     { 
+                |       method: 'POST',
+                |       headers: { 
+                |         'x-api-key': 'YOUR_API_KEY',
+                |         'Content-Type': 'application/json'
+                |       },
+                |       body: JSON.stringify({ mobile, message })
+                |     }
+                |   );
+                |   return await response.json();
+                | };
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      // إنشاء مفتاح API جديد
+      const createForm = document.getElementById('createApiKeyForm');
+      const apiKeyResult = document.getElementById('apiKeyResult');
+      
+      createForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('apiKeyName').value;
+        const expiryDate = document.getElementById('apiKeyExpiry').value || null;
+        
+        try {
+          const response = await fetch('/api/keys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, expiryDate })
+          });
+          
+          const data = await response.json();
+          
+          apiKeyResult.classList.remove('d-none', 'alert-success', 'alert-danger');
+          
+          if (data.success) {
+            apiKeyResult.classList.add('alert-success');
+            apiKeyResult.innerHTML = `
+              <p>تم إنشاء المفتاح بنجاح!</p>
+              <p>مفتاح API الخاص بك: <strong>${data.apiKey.key}</strong></p>
+              <p class="mb-0 text-danger"><small>تأكد من حفظ هذا المفتاح الآن. لن تتمكن من رؤيته كاملاً مرة أخرى.</small></p>
+            `;
+            createForm.reset();
+            
+            // تحديث جدول المفاتيح
+            location.reload();
+          } else {
+            apiKeyResult.classList.add('alert-danger');
+            apiKeyResult.textContent = data.message || 'حدث خطأ أثناء إنشاء المفتاح';
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          apiKeyResult.classList.remove('d-none');
+          apiKeyResult.classList.add('alert-danger');
+          apiKeyResult.textContent = 'حدث خطأ أثناء الاتصال بالخادم';
+        }
+      });
+      
+      // نسخ المفتاح
+      document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const keyInput = this.closest('tr').querySelector('.api-key-value');
+          keyInput.select();
+          document.execCommand('copy');
+          
+          // إظهار رسالة نجاح النسخ
+          const originalTitle = this.getAttribute('title');
+          this.setAttribute('title', 'تم النسخ!');
+          
+          setTimeout(() => {
+            this.setAttribute('title', originalTitle);
+          }, 1500);
+        });
+      });
+      
+      // تفعيل/تعطيل المفتاح
+      document.querySelectorAll('.toggle-key-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const row = this.closest('tr');
+          const keyId = row.dataset.keyId;
+          const isActive = row.querySelector('.badge').classList.contains('bg-success');
+          
+          try {
+            const response = await fetch(`/api/keys/${keyId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isActive: !isActive })
+            });
+            
+            if (response.ok) {
+              location.reload(); // تحديث الصفحة لإظهار التغييرات
+            } else {
+              alert('حدث خطأ أثناء تحديث حالة المفتاح');
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('حدث خطأ أثناء الاتصال بالخادم');
+          }
+        });
+      });
+      
+      // حذف المفتاح
+      document.querySelectorAll('.delete-key-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          if (!confirm('هل أنت متأكد من حذف هذا المفتاح؟ لا يمكن التراجع عن هذا الإجراء.')) {
+            return;
+          }
+          
+          const row = this.closest('tr');
+          const keyId = row.dataset.keyId;
+          
+          try {
+            const response = await fetch(`/api/keys/${keyId}`, {
+              method: 'DELETE'
+            });
+            
+            if (response.ok) {
+              row.remove(); // إزالة الصف من الجدول
+              
+              // إذا كان الجدول فارغاً، إظهار رسالة "لا توجد مفاتيح"
+              const tbody = document.getElementById('apiKeysTableBody');
+              if (tbody.querySelectorAll('tr').length === 0) {
+                tbody.innerHTML = `
+                  <tr>
+                    <td class="text-center text-muted" colspan="8">لا توجد مفاتيح API حالياً</td>
+                  </tr>
+                `;
+              }
+            } else {
+              alert('حدث خطأ أثناء حذف المفتاح');
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('حدث خطأ أثناء الاتصال بالخادم');
+          }
+        });
+      });
+    }); 

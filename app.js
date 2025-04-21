@@ -5,6 +5,7 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
 const whatsappclient = require("./helpers/whatsapp-client");
 const whatsappRoutes = require("./routes/whatsapp.route");
+const apiRoutes = require("./routes/api.route");
 
 require("dotenv").config();
 
@@ -21,6 +22,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use("/api/v1", whatsappRoutes);
+app.use("/api", apiRoutes);
 
 app.all("*", async (req, res) => {
   return res.status(404).json({

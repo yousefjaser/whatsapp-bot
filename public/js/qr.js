@@ -97,7 +97,7 @@ messageForm.addEventListener('submit', async (e) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                number: phone,
+                mobile: phone,
                 message: message
             })
         });

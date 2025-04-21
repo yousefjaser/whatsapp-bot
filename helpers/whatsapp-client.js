@@ -65,6 +65,7 @@ module.exports.config = () => {
       global.clientready = true;
       global.clientauthenticated = true;
       global.whatsappclient_qr = null;
+      global.connectedTime = new Date();
     });
 
     client.on("authenticated", () => {

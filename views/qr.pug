@@ -74,5 +74,55 @@ html(lang='en')
                     label(for="message") Message:
                     textarea(id="message", name="message", rows="4", placeholder="Type your message here", required)
                 button(type="submit") Send Message
+            
+            div(class="container", style="margin-top: 30px;")
+                h3 التحقق من رقم واتساب
+                div(class="check-number-container")
+                    div(class="form-group")
+                        label(for="check-phone") رقم الهاتف (مع رمز الدولة):
+                        input(type="text", id="check-phone", placeholder="مثال: +966500000000")
+                    button(id="check-number-btn") تحقق من الرقم
+                div(id="check-result", class="status")
 
         script(src="/js/qr.js" type="module")
+        script.
+            document.addEventListener('DOMContentLoaded', function() {
+                const checkNumberBtn = document.getElementById('check-number-btn');
+                const checkPhoneInput = document.getElementById('check-phone');
+                const checkResult = document.getElementById('check-result');
+                
+                checkNumberBtn.addEventListener('click', async function() {
+                    const phoneNumber = checkPhoneInput.value.trim();
+                    
+                    if (!phoneNumber) {
+                        checkResult.className = 'status waiting';
+                        checkResult.innerHTML = 'الرجاء إدخال رقم هاتف للتحقق منه';
+                        return;
+                    }
+                    
+                    checkResult.className = 'status waiting';
+                    checkResult.innerHTML = 'جاري التحقق من الرقم...';
+                    
+                    try {
+                        const response = await fetch(`/api/v1/check-number?number=${encodeURIComponent(phoneNumber)}`);
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            if (data.exists) {
+                                checkResult.className = 'status success';
+                                checkResult.innerHTML = `<strong>نعم</strong> - الرقم ${data.number} مسجل على واتساب.`;
+                            } else {
+                                checkResult.className = 'status waiting';
+                                checkResult.innerHTML = `<strong>لا</strong> - الرقم ${data.number} غير مسجل على واتساب.`;
+                            }
+                        } else {
+                            checkResult.className = 'status waiting';
+                            checkResult.innerHTML = data.error || 'حدث خطأ أثناء التحقق من الرقم';
+                        }
+                    } catch (error) {
+                        checkResult.className = 'status waiting';
+                        checkResult.innerHTML = 'حدث خطأ أثناء التحقق من الرقم، يرجى المحاولة مرة أخرى';
+                        console.error('Error checking number:', error);
+                    }
+                });
+            });
