@@ -3,6 +3,9 @@ import QrCreator from "https://cdn.jsdelivr.net/npm/qr-creator/dist/qr-creator.e
 const qrcode = document.getElementById("qrcode").innerText;
 const clientready = document.getElementById("clientready").innerText;
 const clientauthenticated = document.getElementById("clientauthenticated").innerText;
+const serverless = document.getElementById("serverless")?.innerText === "true";
+const messageElement = document.getElementById("message");
+const serverlessMessage = messageElement ? messageElement.innerText : null;
 const qrdiv = document.getElementById("qr-div");
 const statusDiv = document.getElementById("status-div");
 const messageForm = document.getElementById("message-form");
@@ -55,7 +58,18 @@ async function checkStatus() {
     }
 }
 
-if (!qrcode && clientready != "yes" && clientauthenticated != "yes") {
+if (serverless) {
+    // إذا كنا في وضع Serverless، نعرض رسالة بديلة
+    updateStatus(serverlessMessage || "وضع QR غير متاح في بيئة Serverless. يرجى تشغيل الخادم محلياً للوصول إلى رمز QR.", false);
+    showMessageForm(true); // إظهار نموذج الرسائل للاختبار
+    qrdiv.innerHTML = '<div style="margin: 20px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; background-color: #f8f9fa;">' +
+                     '<h3>بيئة Serverless</h3>' +
+                     '<p>لا يمكن استخدام رمز QR في بيئة Vercel Serverless.</p>' +
+                     '<p>لتجربة إرسال الرسائل في وضع Serverless، استخدم النموذج أدناه.</p>' +
+                     '<p>ملاحظة: سيتم تخزين الرسائل ولكن لن يتم إرسالها تلقائياً.</p>' +
+                     '</div>';
+    return;
+} else if (!qrcode && clientready != "yes" && clientauthenticated != "yes") {
     updateStatus("Failed to load relevant info, please refresh your browser");
     showMessageForm(false);
 } else if (clientready == "yes") {

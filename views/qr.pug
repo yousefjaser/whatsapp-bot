@@ -60,6 +60,9 @@ html(lang='en')
         span(style="display:none;", id="qrcode")=qr
         span(style="display:none;", id="clientready")=clientready
         span(style="display:none;", id="clientauthenticated")=clientauthenticated
+        span(style="display:none;", id="serverless")=serverless
+        if message
+            span(style="display:none;", id="message")=message
         
         div(class="container")
             div(id="status-div", class="status")

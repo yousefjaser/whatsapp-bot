@@ -13,8 +13,24 @@ router.get("/status", (req, res) => {
 });
 
 router.get("/qr", (req, res) => {
+  // التحقق ما إذا كنا في بيئة Vercel Serverless
+  const isServerless = process.env.VERCEL === '1';
+  
+  if (isServerless) {
+    // عرض صفحة بديلة في وضع Serverless
+    return res.render("qr", {
+      serverless: true,
+      message: "وضع QR غير متاح في بيئة Serverless. يرجى تشغيل الخادم محلياً للوصول إلى رمز QR.",
+      qr: null,
+      clientready: "no",
+      clientauthenticated: "no"
+    });
+  }
+  
+  // السلوك العادي خارج بيئة Serverless
   console.log(global.clientready, global.whatsappclient_qr);
   res.render("qr", {
+    serverless: false,
     qr: global.whatsappclient_qr,
     clientready: global.clientready ? "yes" : "no",
     clientauthenticated: global.clientauthenticated ? "yes" : "no",
