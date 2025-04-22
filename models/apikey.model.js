@@ -1,86 +1,114 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db.config');
+const { v4: uuidv4 } = require('uuid');
+const supabase = require('../config/supabase');
 
 /**
  * نموذج مفتاح API
  * يتم استخدامه للتحقق من صحة طلبات API
  */
-const ApiKey = sequelize.define('ApiKey', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    comment: 'اسم المستخدم أو الخدمة التي تستخدم المفتاح'
-  },
-  key: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    comment: 'مفتاح API الفريد'
-  },
-  expiryDate: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'تاريخ انتهاء صلاحية المفتاح'
-  },
-  isActive: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true,
-    comment: 'حالة تفعيل المفتاح'
-  },
-  lastUsed: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'آخر استخدام للمفتاح'
-  },
-  usageCount: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-    comment: 'عدد مرات استخدام المفتاح'
+class ApiKey {
+  // استرجاع كل المفاتيح
+  static async findAll() {
+    const { data, error } = await supabase
+      .from('ApiKeys')
+      .select('*');
+    
+    if (error) throw error;
+    return data;
   }
-}, {
-  timestamps: true,
-  comment: 'نموذج مفاتيح API لتأمين الوصول إلى واجهات البرمجة'
-});
 
-/**
- * تحديث بيانات استخدام المفتاح
- * @param {string} key - مفتاح API المستخدم
- * @returns {Promise<boolean>} - نجاح أو فشل التحديث
- */
-ApiKey.prototype.updateUsage = async function() {
-  this.lastUsed = new Date();
-  this.usageCount += 1;
-  await this.save();
-  return this;
-}
+  // إنشاء مفتاح جديد
+  static async create(keyData) {
+    const { name, key = uuidv4(), expiryDate, isActive = true } = keyData;
+    
+    const { data, error } = await supabase
+      .from('ApiKeys')
+      .insert([{
+        name,
+        key,
+        expiryDate,
+        isActive,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }])
+      .select();
+    
+    if (error) throw error;
+    return data[0];
+  }
 
-/**
- * التحقق من صلاحية المفتاح
- * @param {string} apiKey - مفتاح API للتحقق
- * @returns {Promise<Object|null>} - كائن المفتاح إذا كان صالحًا، وإلا null
- */
-ApiKey.validateKey = async function(apiKey) {
-  const key = await this.findOne({ where: { key: apiKey } });
-  
-  if (!key) {
-    return { valid: false, message: 'مفتاح API غير صالح' };
+  // العثور على مفتاح بواسطة المعرف
+  static async findByPk(id) {
+    const { data, error } = await supabase
+      .from('ApiKeys')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
   }
-  
-  if (!key.isActive) {
-    return { valid: false, message: 'مفتاح API غير مفعل' };
+
+  // حفظ التغييرات
+  static async update(id, changes) {
+    const { data, error } = await supabase
+      .from('ApiKeys')
+      .update({
+        ...changes,
+        updatedAt: new Date()
+      })
+      .eq('id', id)
+      .select();
+    
+    if (error) throw error;
+    return data[0];
   }
-  
-  if (key.expiryDate && new Date() > new Date(key.expiryDate)) {
-    return { valid: false, message: 'مفتاح API منتهي الصلاحية' };
+
+  // حذف مفتاح
+  static async destroy(options) {
+    const { where } = options;
+    const { id } = where;
+    
+    const { error, count } = await supabase
+      .from('ApiKeys')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return count || 0;
   }
-  
-  await key.updateUsage();
-  return { valid: true, key };
+
+  // التحقق من صلاحية المفتاح
+  static async validateKey(apiKey) {
+    const { data, error } = await supabase
+      .from('ApiKeys')
+      .select('*')
+      .eq('key', apiKey)
+      .single();
+    
+    if (error || !data) {
+      return { valid: false, message: 'مفتاح API غير صالح' };
+    }
+    
+    if (!data.isActive) {
+      return { valid: false, message: 'مفتاح API غير مفعل' };
+    }
+    
+    if (data.expiryDate && new Date() > new Date(data.expiryDate)) {
+      return { valid: false, message: 'مفتاح API منتهي الصلاحية' };
+    }
+    
+    // تحديث بيانات الاستخدام
+    await supabase
+      .from('ApiKeys')
+      .update({
+        lastUsed: new Date(),
+        usageCount: (data.usageCount || 0) + 1,
+        updatedAt: new Date()
+      })
+      .eq('id', data.id);
+    
+    return { valid: true, key: data };
+  }
 }
 
 module.exports = ApiKey; 

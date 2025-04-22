@@ -3,6 +3,34 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 const { reportError } = require("../utils");
 
 module.exports.config = () => {
+  // تحقق ما إذا كنا في بيئة Vercel Serverless
+  const isServerless = process.env.VERCEL === '1';
+  
+  if (isServerless) {
+    console.log('تشغيل في بيئة Vercel Serverless - تم تعطيل عميل WhatsApp');
+    
+    // إنشاء عميل وهمي للبيئة السحابية
+    global.whatsappclient = {
+      info: null,
+      isReady: false,
+      sendMessage: async () => { 
+        return { success: false, message: 'عميل WhatsApp غير متاح في الوضع Serverless' }; 
+      },
+      getState: () => null,
+      getContacts: async () => [],
+      getChats: async () => [],
+      isRegisteredUser: async () => false,
+      getChatById: async () => null,
+      initialize: async () => console.log('تم تجاهل تهيئة العميل في الوضع Serverless')
+    };
+    
+    global.clientready = false;
+    global.clientauthenticated = false;
+    global.whatsappclient_qr = "لا يمكن استخدام QR في بيئة Serverless";
+    
+    return;
+  }
+  
   try {
     console.log("Initializing WhatsApp client...");
     

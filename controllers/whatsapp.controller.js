@@ -1,10 +1,66 @@
 const { reportError, isEmpty } = require("../utils");
 const whatsappclient = require("../helpers/whatsapp-client");
+const supabase = require('../config/supabase');
 
 exports.sendMessage = async (req, res, next) => {
   try {
     let client = req.whatsappclient;
+    const isServerless = process.env.VERCEL === '1';
     
+    if (isServerless) {
+      // في بيئة Serverless، نحفظ الرسالة في قاعدة البيانات فقط
+      try {
+        const { mobile, message } = req.body;
+        
+        if (!mobile || !message) {
+          return res.status(400).json({
+            success: false,
+            error: "يرجى تقديم رقم الهاتف والرسالة",
+          });
+        }
+        
+        // تنسيق رقم الهاتف
+        let formattedNumber = mobile.toString().replace(/\D/g, "");
+        
+        // التأكد من أن الرقم يبدأ بمفتاح الدولة
+        if (!formattedNumber.startsWith("1") && !formattedNumber.startsWith("91") && 
+            !formattedNumber.startsWith("966") && !formattedNumber.startsWith("971")) {
+          // إضافة مفتاح السعودية افتراضياً إذا لم يكن موجودًا
+          formattedNumber = "966" + formattedNumber;
+        }
+        
+        // إضافة الرسالة إلى قاعدة البيانات
+        const { data, error } = await supabase
+          .from('Messages')
+          .insert([
+            { 
+              fromNumber: 'system',
+              toNumber: formattedNumber,
+              message: message,
+              status: 'pending',
+              apiKeyId: req.apiKey?.id,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+          ]);
+        
+        if (error) throw error;
+        
+        return res.status(200).json({
+          success: true,
+          message: "تم تسجيل الرسالة بنجاح (وضع Serverless)",
+          note: "في بيئة Serverless، لا يمكن إرسال الرسائل مباشرة. تم تسجيل الرسالة وستتم معالجتها لاحقًا."
+        });
+      } catch (error) {
+        console.error('Error saving message to Supabase:', error);
+        return res.status(400).json({
+          success: false,
+          error: "فشل في حفظ الرسالة: " + (error.message || "خطأ غير معروف"),
+        });
+      }
+    }
+    
+    // التنفيذ العادي إذا لم نكن في بيئة serverless
     if (!client || !global.clientready) {
       return res.status(400).json({
         success: false,
@@ -25,7 +81,8 @@ exports.sendMessage = async (req, res, next) => {
     let formattedNumber = mobile.toString().replace(/\D/g, "");
     
     // التأكد من أن الرقم يبدأ بمفتاح الدولة
-    if (!formattedNumber.startsWith("1") && !formattedNumber.startsWith("91") && !formattedNumber.startsWith("966") && !formattedNumber.startsWith("971")) {
+    if (!formattedNumber.startsWith("1") && !formattedNumber.startsWith("91") && 
+        !formattedNumber.startsWith("966") && !formattedNumber.startsWith("971")) {
       // إضافة مفتاح السعودية افتراضياً إذا لم يكن موجودًا
       formattedNumber = "966" + formattedNumber;
     }
@@ -53,13 +110,35 @@ exports.sendMessage = async (req, res, next) => {
     }
     
     // استخدام sendMessage مع الرقم المنسق بشكل صحيح
-    await client.sendMessage(chatId, message);
+    const messageResponse = await client.sendMessage(chatId, message);
+    
+    // حفظ الرسالة في قاعدة البيانات
+    try {
+      await supabase
+        .from('Messages')
+        .insert([
+          { 
+            fromNumber: 'system',
+            toNumber: formattedNumber,
+            message: message,
+            status: 'sent',
+            apiKeyId: req.apiKey?.id,
+            sentAt: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ]);
+    } catch (dbError) {
+      console.error('Error saving message to database:', dbError);
+      // نستمر حتى لو فشل الحفظ في قاعدة البيانات
+    }
     
     console.log("Message sent:", message);
     
     return res.status(200).json({
       success: true,
       message: "تم إرسال الرسالة بنجاح",
+      response: messageResponse
     });
   } catch (err) {
     reportError("sendMessagectrl err", err);
@@ -101,7 +180,46 @@ exports.checkNumber = async (req, res, next) => {
   try {
     const { number } = req.query;
     let client = req.whatsappclient;
+    const isServerless = process.env.VERCEL === '1';
     
+    if (isServerless) {
+      // في بيئة Serverless، نفترض أن الرقم موجود ونكتفي بالتحقق من التنسيق
+      try {
+        if (isEmpty(number)) {
+          return res.status(400).json({
+            success: false,
+            error: "الرجاء إدخال رقم هاتف للتحقق منه",
+          });
+        }
+
+        // تنظيف الرقم من أي أحرف غير رقمية باستثناء علامة +
+        let formattedNumber = number.trim().replace(/[^\d+]/g, '');
+        
+        // إذا بدأ بـ +، نزيل العلامة وننسق الرقم بالطريقة التي يتوقعها WhatsApp Web
+        if (formattedNumber.startsWith("+")) {
+          formattedNumber = formattedNumber.substring(1);
+        }
+        
+        // نتحقق من أن الرقم يطابق نمط WhatsApp المعروف
+        const isValid = /^\d{10,15}$/.test(formattedNumber);
+        
+        return res.status(200).json({
+          success: true,
+          exists: isValid, // نفترض أن الرقم موجود إذا كان التنسيق صحيحًا
+          message: isValid ? "تنسيق الرقم صحيح (وضع Serverless)" : "تنسيق الرقم غير صحيح",
+          number: formattedNumber,
+          note: "في بيئة Serverless، لا يمكن التحقق من وجود الرقم على واتساب مباشرةً."
+        });
+      } catch (error) {
+        console.error('Error in serverless number check:', error);
+        return res.status(400).json({
+          success: false,
+          error: "حدث خطأ أثناء التحقق من الرقم: " + (error.message || "خطأ غير معروف"),
+        });
+      }
+    }
+    
+    // التنفيذ العادي إذا لم نكن في بيئة serverless
     if (!client || !global.clientready) {
       return res.status(400).json({
         success: false,
